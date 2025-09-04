@@ -1,0 +1,18 @@
+# Development dependencies
+-r requirements.txt
+
+# Additional dev tools
+ipython==8.17.2
+jupyter==1.0.0
+pre-commit==3.6.0
+bandit==1.7.5
+safety==2.3.4
+
+# Testing helpers
+factory-boy==3.3.0
+faker==20.1.0
+httpx==0.25.2
+
+# Documentation
+mkdocs==1.5.3
+mkdocs-material==9.4.8

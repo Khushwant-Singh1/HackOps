@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: hackops_postgres_dev
+    environment:
+      POSTGRES_DB: hackops_dev
+      POSTGRES_USER: hackops
+      POSTGRES_PASSWORD: hackops123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    networks:
+      - hackops_dev_network
+
+  # Redis Cache & Queue
+  redis:
+    image: redis:7-alpine
+    container_name: hackops_redis_dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_dev_data:/data
+    networks:
+      - hackops_dev_network
+
+  # PgAdmin for database management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: hackops_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@hackops.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - hackops_dev_network
+
+  # Redis Commander for Redis management
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: hackops_redis_commander
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - hackops_dev_network
+
+volumes:
+  postgres_dev_data:
+  redis_dev_data:
+
+networks:
+  hackops_dev_network:
+    driver: bridge
