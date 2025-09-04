@@ -76,7 +76,7 @@ docker_dev() {
     fi
     
     # Start development services
-    docker-compose -f docker-compose.dev.yml up -d
+    docker compose -f docker-compose.dev.yml up -d
     print_status "Development services started!"
     print_status "PostgreSQL: localhost:5432"
     print_status "Redis: localhost:6379" 
@@ -87,7 +87,7 @@ docker_dev() {
 # Stop Docker services
 docker_stop() {
     print_status "Stopping Docker services..."
-    docker-compose -f docker-compose.dev.yml down
+    docker compose -f docker-compose.dev.yml down
     print_status "Docker services stopped!"
 }
 

@@ -26,6 +26,26 @@ class Settings(BaseSettings):
     DATABASE_POOL_SIZE: int = 10
     DATABASE_MAX_OVERFLOW: int = 20
     
+    @property
+    def database_url(self) -> str:
+        """Get database URL for SQLAlchemy."""
+        return self.DATABASE_URL
+    
+    @property
+    def debug(self) -> bool:
+        """Get debug mode."""
+        return self.DEBUG
+    
+    @property
+    def db_pool_size(self) -> int:
+        """Get database pool size."""
+        return self.DATABASE_POOL_SIZE
+    
+    @property
+    def db_max_overflow(self) -> int:
+        """Get database max overflow."""
+        return self.DATABASE_MAX_OVERFLOW
+    
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
     

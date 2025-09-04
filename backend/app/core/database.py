@@ -2,7 +2,6 @@
 Database configuration and session management
 """
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import QueuePool
 from typing import Generator
@@ -22,8 +21,8 @@ engine = create_engine(
 # Create session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Create declarative base for models
-Base = declarative_base()
+# Import Base from models after defining engine
+from app.models.base import Base
 
 
 def get_db() -> Generator[Session, None, None]:
