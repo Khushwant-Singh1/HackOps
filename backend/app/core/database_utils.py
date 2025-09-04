@@ -297,31 +297,162 @@ class PerformanceMonitor:
         }
 
 class TenantManager:
-    """Utilities for multi-tenant database operations."""
+    """
+    Enhanced utilities for multi-tenant database operations with RLS support.
     
-    @staticmethod
-    async def set_tenant_context(session: AsyncSession, tenant_id: str) -> None:
-        """Set tenant context for row-level security."""
+    Provides context managers and utilities for ensuring all database
+    operations are properly scoped to a specific tenant using PostgreSQL
+    row-level security.
+    """
+    
+    def __init__(self):
+        self._current_tenant_id: Optional[str] = None
+    
+    async def set_tenant_context(self, session: AsyncSession, tenant_id: str) -> None:
+        """
+        Set tenant context for row-level security.
+        
+        Args:
+            session: Database session
+            tenant_id: ID of the tenant to set as context
+        """
         await session.execute(
-            text("SET app.current_tenant_id = :tenant_id"),
+            text("SELECT set_config('app.current_tenant_id', :tenant_id, true)"),
             {"tenant_id": tenant_id}
         )
+        self._current_tenant_id = tenant_id
     
-    @staticmethod
-    async def clear_tenant_context(session: AsyncSession) -> None:
-        """Clear tenant context."""
-        await session.execute(text("RESET app.current_tenant_id"))
+    async def clear_tenant_context(self, session: AsyncSession) -> None:
+        """
+        Clear tenant context.
+        
+        Args:
+            session: Database session
+        """
+        await session.execute(
+            text("SELECT set_config('app.current_tenant_id', NULL, true)")
+        )
+        self._current_tenant_id = None
     
-    @staticmethod
+    async def set_system_admin_context(self, session: AsyncSession, is_admin: bool = True) -> None:
+        """
+        Set system admin context for bypassing tenant isolation.
+        
+        Args:
+            session: Database session
+            is_admin: Whether to enable system admin context
+        """
+        await session.execute(
+            text("SELECT set_config('app.is_system_admin', :is_admin, true)"),
+            {"is_admin": str(is_admin).lower()}
+        )
+    
+    async def get_current_tenant_id(self, session: AsyncSession) -> Optional[str]:
+        """
+        Get the current tenant context from the database session.
+        
+        Args:
+            session: Database session
+        
+        Returns:
+            Current tenant ID as string or None if not set
+        """
+        result = await session.execute(
+            text("SELECT current_setting('app.current_tenant_id', true)")
+        )
+        
+        tenant_id = result.scalar()
+        return tenant_id if tenant_id != '' else None
+    
     @asynccontextmanager
-    async def tenant_session(tenant_id: str) -> AsyncGenerator[AsyncSession, None]:
-        """Get a session with tenant context automatically set."""
+    async def tenant_session(self, tenant_id: str) -> AsyncGenerator[AsyncSession, None]:
+        """
+        Get a session with tenant context automatically set.
+        
+        Args:
+            tenant_id: ID of the tenant to scope operations to
+        
+        Yields:
+            Database session with tenant context set
+        """
         async with db_manager.get_session() as session:
+            # Store original tenant context
+            original_tenant_id = await self.get_current_tenant_id(session)
+            
             try:
-                await TenantManager.set_tenant_context(session, tenant_id)
+                # Set tenant context
+                await self.set_tenant_context(session, tenant_id)
                 yield session
             finally:
-                await TenantManager.clear_tenant_context(session)
+                # Restore original tenant context
+                if original_tenant_id:
+                    await self.set_tenant_context(session, original_tenant_id)
+                else:
+                    await self.clear_tenant_context(session)
+    
+    @asynccontextmanager
+    async def system_admin_session(self) -> AsyncGenerator[AsyncSession, None]:
+        """
+        Get a session with system admin context for bypassing tenant isolation.
+        
+        Yields:
+            Database session with system admin context
+        """
+        async with db_manager.get_session() as session:
+            try:
+                # Set system admin context
+                await self.set_system_admin_context(session, True)
+                yield session
+            finally:
+                # Clear system admin context
+                await self.set_system_admin_context(session, False)
+    
+    async def verify_tenant_isolation(self, tenant_id: str) -> Dict[str, Any]:
+        """
+        Verify that tenant isolation is working correctly.
+        
+        Args:
+            tenant_id: Tenant ID to test isolation for
+        
+        Returns:
+            Dictionary with isolation test results
+        """
+        results = {
+            "tenant_id": tenant_id,
+            "isolation_enabled": True,
+            "tests": {}
+        }
+        
+        # Test tenant context
+        async with self.tenant_session(tenant_id) as session:
+            try:
+                # Verify tenant context is set
+                current_tenant = await self.get_current_tenant_id(session)
+                results["tests"]["tenant_context"] = {
+                    "status": "pass" if current_tenant == tenant_id else "fail",
+                    "current_tenant": current_tenant,
+                    "expected_tenant": tenant_id
+                }
+                
+                # Test isolation functions
+                result = await session.execute(
+                    text("SELECT get_current_tenant_id()::text")
+                )
+                db_tenant = result.scalar()
+                
+                results["tests"]["isolation_function"] = {
+                    "status": "pass" if db_tenant == tenant_id else "fail",
+                    "db_tenant": db_tenant,
+                    "expected_tenant": tenant_id
+                }
+                
+            except Exception as e:
+                results["tests"]["error"] = {
+                    "status": "error",
+                    "error": str(e)
+                }
+        
+        return results
 
 class CacheManager:
     """Database-level caching utilities."""

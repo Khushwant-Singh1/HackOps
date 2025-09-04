@@ -26,6 +26,9 @@ class User(Base, SoftDeleteMixin):
     auth_provider = Column(String(50), nullable=True)  # google, github, microsoft, etc.
     oauth_id = Column(String(255), nullable=True)
     
+    # System-level roles
+    system_role = Column(String(50), nullable=True)  # super_admin, platform_admin, support
+    
     # Profile information
     first_name = Column(String(100), nullable=False)
     last_name = Column(String(100), nullable=False)

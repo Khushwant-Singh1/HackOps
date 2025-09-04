@@ -56,6 +56,9 @@ class Settings(BaseSettings):
     # CORS
     ALLOWED_HOSTS: List[str] = ["*"]
     
+    # Base URL for OAuth redirects
+    BASE_URL: str = "http://localhost:8000"
+    
     # OAuth Providers
     GOOGLE_CLIENT_ID: Optional[str] = None
     GOOGLE_CLIENT_SECRET: Optional[str] = None

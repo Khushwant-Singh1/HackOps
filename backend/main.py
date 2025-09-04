@@ -22,12 +22,15 @@ from app.core.database_utils import (
     get_db,
     db_manager
 )
+from app.core.dependencies import AuthenticationMiddleware
+from app.core.redis_client import redis_client
 
 # Import API routes
 from app.api.v1.auth import router as auth_router
 from app.api.v1.events import router as events_router
 from app.api.v1.teams import router as teams_router
 from app.api.v1.submissions import router as submissions_router
+from app.api.v1.tenants import router as tenants_router
 
 # Configure logging
 logging.basicConfig(
@@ -47,8 +50,11 @@ async def lifespan(app: FastAPI):
         await startup_database()
         logger.info("Database initialization completed")
         
+        # Initialize Redis connection
+        await redis_client.connect()
+        logger.info("Redis connection established")
+        
         # You can add other startup tasks here:
-        # - Initialize Redis connection
         # - Start background tasks
         # - Warm up caches
         
@@ -60,6 +66,7 @@ async def lifespan(app: FastAPI):
     finally:
         # Shutdown
         logger.info("Shutting down HackOps application...")
+        await redis_client.disconnect()
         await shutdown_database()
         logger.info("Application shutdown completed")
 
@@ -90,11 +97,20 @@ def create_application() -> FastAPI:
         allowed_hosts=settings.ALLOWED_HOSTS
     )
     
+    # Add authentication middleware
+    application.add_middleware(AuthenticationMiddleware)
+    
     # Include API routes
     application.include_router(
         auth_router,
         prefix="/api/v1/auth",
         tags=["Authentication"]
+    )
+    
+    application.include_router(
+        tenants_router,
+        prefix="/api/v1",
+        tags=["Tenants"]
     )
     
     application.include_router(
