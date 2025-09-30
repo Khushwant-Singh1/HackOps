@@ -27,10 +27,18 @@ func main() {
 	}
 
 	// Initialize database
-	db, err := database.NewConnection(cfg.DatabaseURL)
+	gormDB, err := database.NewConnection(cfg.DatabaseURL)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
+
+	db := database.NewDBWrapper(gormDB)
+
+	// Run auto migration
+	if err := db.AutoMigrate(); err != nil {
+		log.Fatalf("Failed to run database migrations: %v", err)
+	}
+	log.Println("Database migrations completed successfully")
 
 	// Initialize Redis client
 	redisClient, err := database.NewRedisClient(cfg.RedisURL)
@@ -64,7 +72,7 @@ func main() {
 
 	// Health check endpoints
 	router.GET("/health", handlers.HealthCheck)
-	router.GET("/health/detailed", handlers.DetailedHealthCheck(db, redisClient))
+	router.GET("/health/detailed", handlers.DetailedHealthCheck(gormDB, redisClient))
 
 	// Root endpoint
 	router.GET("/", func(c *gin.Context) {
@@ -154,7 +162,7 @@ func main() {
 		}
 
 		// Close database connection
-		sqlDB, err := db.DB()
+		sqlDB, err := gormDB.DB()
 		if err == nil {
 			sqlDB.Close()
 		}
