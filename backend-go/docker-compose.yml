@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  hackops-go:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgres://hackops:hackops123@postgres:5432/hackops?sslmode=disable
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=your-secret-key-change-in-production
+      - DEBUG=false
+      - ALLOWED_HOSTS=*
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - hackops-network
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: hackops
+      POSTGRES_USER: hackops
+      POSTGRES_PASSWORD: hackops123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - hackops-network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - hackops-network
+
+  # Optional: Redis Commander for Redis management
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - hackops-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  hackops-network:
+    driver: bridge
