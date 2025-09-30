@@ -173,7 +173,7 @@ func main() {
 		log.Println("Server exited")
 	}()
 
-	log.Printf("Starting %s server on port %d", cfg.AppName, cfg.Port)
+	log.Printf("Starting %s server on port %d with Air hot reloading!", cfg.AppName, cfg.Port)
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("Failed to start server: %v", err)
 	}

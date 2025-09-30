@@ -189,10 +189,16 @@ func (User) Fields() []ent.Field {
 func (User) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("sessions", UserSession.Type),
-		edge.To("owned_tenants", Tenant.Type),
-		edge.To("events", Event.Type),
-		edge.To("teams", Team.Type),
-		edge.To("submissions", Submission.Type),
+		// TODO: Uncomment these edges once the corresponding ent schema files are created:
+		// - ent/schema/tenant.go for Tenant entity
+		// - ent/schema/event.go for Event entity
+		// - ent/schema/team.go for Team entity
+		// - ent/schema/submission.go for Submission entity
+		//
+		// edge.To("owned_tenants", Tenant.Type),
+		// edge.To("events", Event.Type),
+		// edge.To("teams", Team.Type),
+		// edge.To("submissions", Submission.Type),
 	}
 }
 
